@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import List
 import numpy as np
 
+
 def getSupportNew(database: List, item, new: bool, debug: bool = False) -> int:
     support = 0
     for sequence in database:
@@ -11,9 +12,7 @@ def getSupportNew(database: List, item, new: bool, debug: bool = False) -> int:
                 support += 1
                 break
     if debug:
-        print(f"Calculated support is {support} for item {item}, NEW item, database:")
-        [print(d) for d in database]
-        print()
+        print(f"Calculated support is {support} for item {item}, NEW item.")
     return support
 
 
@@ -23,9 +22,7 @@ def getSupportLast(database: List, item, debug: bool = False) -> int:
         if item in sequence[0]:
             support += 1
     if debug:
-        print(f"Calculated support is {support} for item {item}, LAST item, database:")
-        [print(d) for d in database]
-        print()
+        print(f"Calculated support is {support} for item {item}, LAST item.")
 
     return support
 
@@ -55,8 +52,7 @@ def prefixspan(
     frequentPatterns = []
     for item in frequentItems:
         if debug:
-            print(f"Currently at level {level} PS with database:")
-            [print(d) for d in database]
+            print(f"Currently at level {level} PS:")
             print(
                 f'minsup = {minsup}, pattern so far is: {"" if pattern else "None"}',
                 end=" ",
@@ -69,21 +65,21 @@ def prefixspan(
             print(f"Processing item {item}")
             print()
 
-        newBranch = False
-        lastBranch = False
+        newSupport = 0
+        lastSupport = 0
 
         # Append new item as a new transaction:
         newPattern = deepcopy(pattern) + [[item]]
-        newBranch = getSupportNew(database, item, level > 0, debug) >= minsup
+        newSupport = getSupportNew(database, item, level > 0, debug)
 
         # Insert new item into last transaction:
         if pattern and pattern[-1] and not item in pattern[-1]:
             lastPattern = deepcopy(pattern)
             lastPattern[-1].append(item)
-            lastBranch = getSupportLast(database, item, debug) >= minsup
+            lastSupport = getSupportLast(database, item, debug)
 
         projectedDatabase = []
-        if newBranch or lastBranch:
+        if newSupport >= minsup or lastSupport >= minsup:
             for sequence in database:
                 projectedSequence = []
                 for i, seqItem in enumerate(sequence):
@@ -96,12 +92,10 @@ def prefixspan(
                 if projectedSequence:
                     projectedDatabase.append(projectedSequence)
             if debug:
-                print(f"Found projected database:")
-                [print(d) for d in projectedDatabase]
-                print()
+                print(f"Found projected database.")
 
-        if newBranch:
-            frequentPatterns.append(newPattern)
+        if newSupport >= minsup:
+            frequentPatterns.append((newSupport, newPattern))
             if debug:
                 print(f"Adding pattern {newPattern}")
             if projectedDatabase:
@@ -111,8 +105,8 @@ def prefixspan(
                     prefixspan(projectedDatabase, minsup, newPattern, level + 1, debug)
                 )
 
-        if lastBranch:
-            frequentPatterns.append(lastPattern)
+        if lastSupport >= minsup:
+            frequentPatterns.append((lastSupport, lastPattern))
             if debug:
                 print(f"Adding pattern {lastPattern}")
 
@@ -123,13 +117,12 @@ def prefixspan(
                     prefixspan(projectedDatabase, minsup, lastPattern, level + 1, debug)
                 )
 
-
-
     if debug and level:
         print(f"Going back to level {level-1}")
     if debug and not level:
         print(f"END")
     return frequentPatterns
+
 
 if __name__ == "__main__":
     database = [
